@@ -1,0 +1,4 @@
+outs:
+- md5: b11a1e86e04faf69b991f4c34d947b08
+  size: 1772061
+  path: stroke_data.csv
