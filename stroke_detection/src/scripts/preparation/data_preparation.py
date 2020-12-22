@@ -110,12 +110,18 @@ skewed_distributed_features = ['avg_glucose_level']
 # + [markdown] hidden=true
 # There is missing values
 
-# + [markdown] hidden=true
+# + [markdown] heading_collapsed=true hidden=true
 # ### Handling Categorical Columns
 
 # + hidden=true
 
 
+
+# + [markdown] heading_collapsed=true
+# ## Save Clean Data
+
+# + hidden=true
+dp.save_data(data=df, name='processed_data', method='csv', loc='processed')
 
 # + [markdown] heading_collapsed=true
 # ## Train Test Split
