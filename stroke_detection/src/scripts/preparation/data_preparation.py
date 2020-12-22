@@ -23,6 +23,7 @@ import seaborn as sns
 import datasist.project as dp
 import datasist as ds
 from pandas_profiling import ProfileReport
+import sweetviz as sv
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.preprocessing import PowerTransformer, QuantileTransformer
@@ -53,6 +54,9 @@ Categorical_Features = ['gender', 'ever_married', 'work_type', 'Residence_type',
 # + [markdown] heading_collapsed=true
 # ## Exploratory Data Analysis (EDA)
 
+# + [markdown] heading_collapsed=true hidden=true
+# ### Pandas Profiling
+
 # + hidden=true
 profile = ProfileReport(df, title='Pandas Profiling Report', explorative=True)
 
@@ -61,6 +65,19 @@ profile.to_file("../../outputs/profiling/Stroke_Detection_pandas_profiling.html"
 
 # + hidden=true
 df.columns
+
+# + [markdown] heading_collapsed=true hidden=true
+# ### sweetviz profiling
+
+# + hidden=true
+my_report = sv.analyze(source= df,
+                      target_feat= "stroke") 
+
+# + hidden=true
+my_report.show_html('../../outputs/profiling/Stroke_Detection_pandas_sv_profiling.html')
+
+# + [markdown] heading_collapsed=true hidden=true
+# ### Summary Of EDA
 
 # + hidden=true
 categorical_features = ['gender', 'hypertension', 'heart_disease', 'ever_married', 'work_type', \
@@ -97,6 +114,7 @@ skewed_distributed_features = ['avg_glucose_level']
 # ### Handling Categorical Columns
 
 # + hidden=true
+
 
 
 # + [markdown] heading_collapsed=true
