@@ -13,10 +13,8 @@
 #     name: py_caret_env
 # ---
 
-# + [markdown] heading_collapsed=true
 # ## Import Libraries
 
-# + hidden=true
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -65,48 +63,34 @@ from sklearn.metrics import make_scorer
 from imblearn.metrics import geometric_mean_score
 from sklearn.metrics import classification_report, confusion_matrix, plot_confusion_matrix
 
-# + [markdown] heading_collapsed=true
 # ## Load Clean Data
 
-# + hidden=true
-#"../../data/processed/stroke_data_processed_important_3_features.csv"
-#"../../data/processed/stroke_data_processed_important_2_features.csv"
-df = pd.read_csv("../../data/processed/stroke_data_processed_important_2_features.csv")
+df = pd.read_csv("../../data/processed/stroke_data_processed_important_features.csv")
 
-# + hidden=true
 df.shape
 
-# + hidden=true
 X = df.drop(['stroke'],axis=1)
 y = df['stroke']
 
-# + hidden=true
 y = LabelEncoder().fit_transform(y)
 
-# + [markdown] heading_collapsed=true
 # ## Train Test Split
 
-# + hidden=true
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, stratify=y, random_state=42)
 
-# + hidden=true
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.25, stratify=y_train, random_state=42)
 
-# + hidden=true
 print (f"Train Data (X): {X_train.shape}")
 print (f"Test Data (X): {X_test.shape}")
 print (f"Validation Data (X): {X_valid.shape}")
 
-# + hidden=true
 print (f"Train Data (y): {y_train.shape}")
 print (f"Test Data (y): {y_test.shape}")
 print (f"Validation Data (y): {y_valid.shape}")
 
 
-# + [markdown] heading_collapsed=true
 # ## Shape of the Dataset
 
-# + hidden=true
 def get_weight():
     from collections import Counter
     # summarize the shape of the dataset
@@ -119,15 +103,12 @@ def get_weight():
     return (int(weight))
 
 
-# + hidden=true
 weights = get_weight()
 print(weights)
 
 
-# + [markdown] heading_collapsed=true
 # ## Evaluation Method
 
-# + hidden=true
 # evaluate a model
 def evaluate_model(X, y, model):
     # define evaluation procedure
@@ -139,10 +120,9 @@ def evaluate_model(X, y, model):
     return scores
 
 
-# + [markdown] heading_collapsed=true
 # ## Find Best Algorithm using AutoML
 
-# + [markdown] heading_collapsed=true hidden=true
+# + [markdown] heading_collapsed=true
 # ### Find Best Algorithm with Best Params Using PyCaret
 
 # + hidden=true
@@ -169,10 +149,7 @@ clf = setup(data = df, target = 'stroke', session_id=123,
 
 # + hidden=true
 #with mlflow.start_run():
-best = compare_models()
-best_model = finalize_model(best)
-tuned_model = tune_model(best_model, optimize = 'F1') #Accuracy, AUC, Recall, Precision, F1, Kappa, MCC
-predictions = predict_model(tuned_model)
+best = compare_models(sort='AUC')
 
 #mlflow.log_metric('accuracy', predictions)
 #mlflow.sklearn.log_model(tuned_model, 'model')
@@ -181,25 +158,48 @@ predictions = predict_model(tuned_model)
 best_model = finalize_model(best)
 
 # + hidden=true
-plot_model(best_model, plot = 'confusion_matrix')
+metric = make_scorer(geometric_mean_score)
+tuned_model = tune_model(best_model, optimize = 'AUC') #Accuracy, AUC, Recall, Precision, F1, Kappa, MCC
 
 # + hidden=true
-plot_model(best_model, plot='feature')
+predictions = predict_model(tuned_model)
+
+# + hidden=true
+plot_model(tuned_model, plot = 'confusion_matrix')
+
+# + hidden=true
+plot_model(tuned_model, plot='feature')
 
 # + hidden=true
 # define the data preparation and modeling pipeline
-pipeline = Pipeline(steps=[('prep', col_transform), ('m', best_model)])
+pipeline = Pipeline(steps=[('scaler', StandardScaler()), ('m', tuned_model)])
 
 # + hidden=true
-pipeline.fit(X_train, y_train)
+tuned_model.fit(X_train, y_train)
 
 # + hidden=true
-print(classification_report(y_test, pipeline.predict(X_test)))
+print(classification_report(y_test, tuned_model.predict(X_test)))
 
 # + hidden=true
 plot_confusion_matrix(pipeline, X_test, y_test, values_format='d', display_labels=["Stroke","Not Stroke"]);
 
-# + [markdown] heading_collapsed=true hidden=true
+# + hidden=true
+lr = create_model('lr')
+
+# + hidden=true
+tuned_lr = tune_model(lr)
+
+# + hidden=true
+tuned_model.fit(X_train, y_train)
+print(classification_report(y_test, tuned_model.predict(X_test)))
+
+# + hidden=true
+plot_confusion_matrix(tuned_model, X_test, y_test, values_format='d', display_labels=["Stroke","Not Stroke"]);
+
+# + hidden=true
+
+
+# + [markdown] heading_collapsed=true
 # ### Find Best Algorithm with Best Params Using HyperoptEstimator AutoML
 
 # + hidden=true
@@ -237,12 +237,12 @@ print("Accuracy: %.3f" % accuracy)
 print(model.best_model())
 # + hidden=true
 
+# -
 
 
-# + [markdown] heading_collapsed=true hidden=true
 # ### Find Best Algorithm with Best Params Using TPOT
 
-# + hidden=true
+# +
 #with mlflow.start_run():
 # define the model evaluation the metric
 metric = make_scorer(geometric_mean_score)
@@ -251,8 +251,8 @@ cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
 # define search
 #model = TPOTClassifier(generations=5, population_size=50, cv=cv, scoring='accuracy', 
                        #verbosity=2, random_state=1, n_jobs=-1)
-tpot = TPOTClassifier(max_time_mins=180, cv=cv, scoring=metric, 
-                       verbosity=2, random_state=1, n_jobs=-1)
+tpot = TPOTClassifier(cv=cv, scoring=metric, 
+                       verbosity=2, random_state=1, n_jobs=-1) #max_time_mins=720, 
 # perform the search
 tpot.fit(X_train, y_train)
 
@@ -262,12 +262,18 @@ model = tpot.fitted_pipeline_
 
 #mlflow.log_metric('accuracy', predictions)
 #mlflow.sklearn.log_model(model, 'model')
+# -
 
-# + hidden=true
+#export the best model
+tpot.export('tpot_stroke_best_model.py')
+
 print(predictions)
 
-# + hidden=true
 print(model)
+
+print(classification_report(y_test, model.predict(X_test)))
+
+plot_confusion_matrix(model, X_test, y_test, values_format='d', display_labels=["Stroke","Not Stroke"]);
 
 
 # + [markdown] heading_collapsed=true
@@ -440,6 +446,7 @@ plot_confusion_matrix(pipeline, X_test, y_test)
 # ## Parameter Optimization
 
 # + hidden=true
+
 
 
 # + hidden=true

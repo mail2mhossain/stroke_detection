@@ -18,6 +18,7 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import seaborn as sns
 import datasist.project as dp
 import datasist as ds
@@ -59,29 +60,7 @@ Numerical_Features = ['age', 'hypertension', 'heart_disease', 'avg_glucose_level
 Categorical_Features = ['gender', 'ever_married', 'work_type', 'Residence_type', 'smoking_status']
 
 # + [markdown] heading_collapsed=true
-# ## Exploratory Data Analysis (EDA)
-
-# + [markdown] heading_collapsed=true hidden=true
-# ### Pandas Profiling
-
-# + hidden=true
-profile = ProfileReport(df, title='Pandas Profiling Report', explorative=True)
-
-# + hidden=true
-profile.to_file("../../outputs/profiling/Stroke_Detection_pandas_profiling.html")
-
-# + [markdown] heading_collapsed=true hidden=true
-# ### sweetviz profiling
-
-# + hidden=true
-my_report = sv.analyze(source= df,
-                      target_feat= "stroke") 
-
-# + hidden=true
-my_report.show_html('../../outputs/profiling/Stroke_Detection_pandas_sv_profiling.html')
-
-# + [markdown] heading_collapsed=true hidden=true
-# ### Summary Of EDA
+# ## Summary Of EDA
 
 # + hidden=true
 df.columns
@@ -142,29 +121,67 @@ for i, name in enumerate (numeic_features):
         
 print (f"Gaussian Like columns: {Gaussian_Like}")
 print (f"Non-Gaussian Like columns: {Non_Gaussian}")
-# -
-
-# ## Data Preprocessing
 
 # + [markdown] heading_collapsed=true
+# ## Data Preprocessing
+
+# + [markdown] heading_collapsed=true hidden=true
 # ### Remove Duplicate Data
 
 # + [markdown] hidden=true
 # There are no duplicate rows
 
-# + [markdown] heading_collapsed=true
+# + [markdown] heading_collapsed=true hidden=true
 # ### Identify and Remove column variables that only have a single value.
 
 # + [markdown] hidden=true
 # There is no such column
 
-# + [markdown] heading_collapsed=true
+# + [markdown] heading_collapsed=true hidden=true
 # ### Missing Data Imputation
 
 # + [markdown] hidden=true
 # There is missing values
 
-# + [markdown] heading_collapsed=true
+# + [markdown] heading_collapsed=true hidden=true
+# ### Scaling Data
+
+# + [markdown] hidden=true
+# df['norm_amount'] = StandardScaler().fit_transform(np.array(df['Amount']).reshape(-1,1))
+
+# + [markdown] hidden=true
+# df['norm_time'] = StandardScaler().fit_transform(np.array(df['Time']).reshape(-1,1))
+# df.drop(['Time','Amount'], axis=1, inplace=True)
+
+# + hidden=true
+df.head()
+
+# + hidden=true
+df.describe()
+
+# + hidden=true
+corr = df.corr()
+
+# + hidden=true
+#cmap=sns.diverging_palette(220, 20, as_cmap=True)
+plt.figure(figsize=(14,8))
+sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns, annot=True, 
+            cmap='RdBu'); #cmap='RdBu'
+
+# + hidden=true
+sns.distplot(df['bmi']);
+
+# + hidden=true
+#sns.set_theme(style="whitegrid")
+sns.boxplot(y=df['age']);
+
+# + hidden=true
+sns.boxplot(y=df['avg_glucose_level']);
+
+# + hidden=true
+sns.boxplot(y=df['bmi']);
+
+# + [markdown] heading_collapsed=true hidden=true
 # ### Handling Categorical Columns
 
 # + hidden=true
@@ -174,7 +191,7 @@ df_one_hot= pd.get_dummies(df, columns=categorical_features, drop_first=True)
 # + hidden=true
 df_one_hot.columns
 
-# + [markdown] heading_collapsed=true
+# + [markdown] heading_collapsed=true hidden=true
 # ### Handling Target Value
 
 # + hidden=true
@@ -183,15 +200,17 @@ y = df_one_hot['stroke']
 
 # + hidden=true
 y = LabelEncoder().fit_transform(y)
-# -
-
-# ## Feature Selection
-
-X_one_hot.columns
-
-X_one_hot.shape
 
 # + [markdown] heading_collapsed=true
+# ## Feature Selection
+
+# + hidden=true
+X_one_hot.columns
+
+# + hidden=true
+X_one_hot.shape
+
+# + [markdown] heading_collapsed=true hidden=true
 # ### Boruta
 
 # + hidden=true
@@ -228,42 +247,52 @@ X_filtered.head()
 # + hidden=true
 X_new = X_one_hot[['age', 'avg_glucose_level', 'heart_disease_1']]
 X_new.head()
-# -
 
+# + [markdown] heading_collapsed=true hidden=true
 # ### BorutaShap
 
+# + [markdown] hidden=true
 # This initialization takes a maximum of 5 parameters including a tree based model of your choice example a **“Decision Tree” or “XGBoost” or "CatBoost" default is a “Random Forest”**. Which importance metric you would like to evaluate the features importance with either **Shapley values (default) or Gini importance**, A flag to specify if the problem is either classification or regression, a percentile parameter which will take a percentage of the max shadow feature thus making the selector less strict and finally a p-value or significance level which a after a feature will be either rejected or accepted.
 
+# + hidden=true
 model_xgb = XGBClassifier(objective='binary:logistic')
 Feature_Selector_xgb = BorutaShap(model=model_xgb,
                               importance_measure='shap',
                               classification=True)
 Feature_Selector_xgb.fit(X=X_one_hot, y=y, n_trials=25, random_state=0)
 
+# + hidden=true
 #Returns a subset of the original data with the selected features
 X_subset_xgb = Feature_Selector_xgb.Subset()
 print (X_subset_xgb.shape)
 X_subset_xgb.head()
 
+# + hidden=true
 model_cat = CatBoostClassifier()
 Feature_Selector_cat = BorutaShap(model=model_cat,
                               importance_measure='shap',
                               classification=True)
 Feature_Selector_cat.fit(X=X_one_hot, y=y, n_trials=25, random_state=0)
 
+# + hidden=true
 #Returns a subset of the original data with the selected features
 X_subset_cat = Feature_Selector_cat.Subset()
 print (X_subset_cat.shape)
 X_subset_cat.head()
 
+# + hidden=true
 X_cat = X_one_hot[['age', 'ever_married_Yes', 'avg_glucose_level', 'bmi']]
 
+# + [markdown] heading_collapsed=true hidden=true
 # ### Custom Data based on Boruta Results
 
+# + hidden=true
 X_new = X_one_hot[['age', 'avg_glucose_level', 'heart_disease_1', 'bmi', 'ever_married_Yes']]
 
+# + [markdown] heading_collapsed=true
 # ## Train Test Split
 
+# + hidden=true
 X_train, X_test, y_train, y_test = train_test_split(X_new, y, test_size=0.30, stratify=y, random_state=42)
 
 
@@ -286,10 +315,11 @@ def get_weight():
 # + hidden=true
 weights = get_weight()
 print(weights)
-# -
 
+# + [markdown] heading_collapsed=true
 # ## Data Evaluation
 
+# + [markdown] hidden=true
 # define the data preparation for the columns
 # t = [('cat', OneHotEncoder(drop='first', sparse=False), categorical_features), \
 #      ('min_max', MinMaxScaler(), skewed_distributed_features),\
@@ -297,37 +327,52 @@ print(weights)
 #     #('power', PowerTransformer(), normally_distributed_features)]
 # col_transform = ColumnTransformer(transformers=t)
 
+# + hidden=true
 #define the model evaluation the metric
 metric = make_scorer(geometric_mean_score)
 
+# + hidden=true
 #define the model cross-validation configuration
 cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
 
+# + hidden=true
 model = LogisticRegression(solver='lbfgs', class_weight='balanced')
 pipeline = Pipeline(steps=[('norm', MinMaxScaler()), ('m', model)])
 scores = cross_val_score(pipeline, X_new, y, scoring=metric, cv=cv, n_jobs=-1)
 print('Geometric mean score: %.3f (%.3f)' % (np.mean(scores), np.std(scores)))
 
+# + hidden=true
 pipeline.fit(X_train, y_train)
 
+# + hidden=true
 print(classification_report(y_test, pipeline.predict(X_test)))
 
+# + hidden=true
 plot_confusion_matrix(pipeline, X_test, y_test, values_format='d', display_labels=["Stroke","Not Stroke"]);
 
+# + [markdown] heading_collapsed=true
 # ## Save Clean Data
 
+# + hidden=true
 df_one_hot.shape
 
+# + hidden=true
 df_one_hot['stroke'].head()
 
+# + hidden=true
 df_one_hot['stroke'] = y
 
+# + hidden=true
 df_one_hot['stroke'].head()
 
+# + hidden=true
 df_one_hot.to_csv("../../data/processed/stroke_data_processed_all_features.csv") 
 
+# + hidden=true
 df_boruta = df_one_hot[['age', 'avg_glucose_level', 'heart_disease_1', 'bmi', 'ever_married_Yes', 'stroke']]
 
+# + hidden=true
 df_boruta.to_csv("../../data/processed/stroke_data_processed_important_features.csv") 
 
+# + hidden=true
 
